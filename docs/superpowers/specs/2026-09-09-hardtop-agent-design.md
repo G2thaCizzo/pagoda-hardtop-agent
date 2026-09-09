@@ -44,9 +44,11 @@ pagoda-hardtop-agent/
 - **Trigger**: cron, Mondays 06:00 UTC (07:00 Europe/London)
 - **Repo source**: the repo above
 - **Tools**: WebSearch, WebFetch, Bash, Read, Write, Edit, Glob, Grep
-- **Email**: HTTP call to SendGrid's send API using an API key stored as a
-  cloud-environment secret (never committed to the repo, never in the
-  prompt). Single-sender verified address as "from". Recipient:
+- **Email**: HTTP call to Brevo's transactional email API using an API key
+  stored as a cloud-environment secret (never committed to the repo, never
+  in the prompt). Single-sender verified address as "from" (Brevo's free
+  plan is permanent — 300 emails/day, no expiry — unlike SendGrid which
+  dropped its free tier in favour of a 60-day trial). Recipient:
   glendanielcooney@gmail.com. This is a send-only credential with no
   relationship to Glen's Gmail account — Gmail is only ever the recipient.
 
@@ -67,7 +69,7 @@ pagoda-hardtop-agent/
 7. Build one HTML email: New listings first (full detail incl. thumbnail),
    then the rest sorted by distance ascending. Note any source that
    couldn't be checked this run.
-8. Send via SendGrid.
+8. Send via Brevo.
 9. Archive the same HTML to `runs/YYYY-MM-DD.html`.
 10. Add any new listings to `state/seen_listings.json`; commit and push.
 11. If zero listings found across all sources (e.g. total search failure),
@@ -104,7 +106,7 @@ Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
 
 - A single source failing (blocked, timeout, no results) does not fail the
   whole run — it's noted in the email and the run continues.
-- SendGrid send failure: retry once; if it still fails, the routine's run
+- Brevo send failure: retry once; if it still fails, the routine's run
   log will show the failure (visible via `RemoteTrigger` `get_run_log`) —
   no separate alerting for this v1.
 - State file corruption/parse failure: treat as empty state for that run
@@ -113,9 +115,9 @@ Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
 ## Setup dependencies (one-time, outside this spec's automation)
 
 1. GitHub repo created — done (`G2thaCizzo/pagoda-hardtop-agent`).
-2. SendGrid account + single-sender verification — pending, Glen to do
+2. Brevo account + single-sender verification — pending, Glen to do
    with guidance.
-3. SendGrid API key added as a secret on the cloud environment used by the
+3. Brevo API key added as a secret on the cloud environment used by the
    routine — pending.
 4. The `RemoteTrigger` routine itself created (cron, prompt, repo source,
    env secret reference) — pending, part of the implementation plan.

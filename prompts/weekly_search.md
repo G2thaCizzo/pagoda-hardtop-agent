@@ -104,14 +104,15 @@ One HTML email, structure:
 
 ## 7. Send the email
 
-POST to SendGrid's send API using the API key from the `SENDGRID_API_KEY`
-environment variable (already set on this cloud environment — read it via
-Bash, never print it, never write it to any file):
+POST to Brevo's transactional email API using the API key from the
+`BREVO_API_KEY` environment variable (already set on this cloud
+environment — read it via Bash, never print it, never write it to any
+file):
 
 ```bash
 curl -s -w "\n%{http_code}\n" --request POST \
-  --url https://api.sendgrid.com/v3/mail/send \
-  --header "Authorization: Bearer $SENDGRID_API_KEY" \
+  --url https://api.brevo.com/v3/smtp/email \
+  --header "api-key: $BREVO_API_KEY" \
   --header "Content-Type: application/json" \
   --data @email_payload.json
 ```
@@ -121,18 +122,18 @@ delete it after sending) as:
 
 ```json
 {
-  "personalizations": [{"to": [{"email": "glendanielcooney@gmail.com"}]}],
-  "from": {"email": "VERIFIED_SENDER_ADDRESS"},
+  "sender": {"email": "VERIFIED_SENDER_ADDRESS", "name": "Pagoda Hardtop Watch"},
+  "to": [{"email": "glendanielcooney@gmail.com"}],
   "subject": "SUBJECT_HERE",
-  "content": [{"type": "text/html", "value": "HTML_BODY_HERE"}]
+  "htmlContent": "HTML_BODY_HERE"
 }
 ```
 
-Replace `VERIFIED_SENDER_ADDRESS` with the address verified in SendGrid
+Replace `VERIFIED_SENDER_ADDRESS` with the address verified in Brevo
 (filled in when this routine was configured — see the routine's stored
 prompt if you need to check it, it should already be correct in this file
 by the time you're reading it). If the send returns anything other than
-HTTP 202, treat the run as failed at this step — still proceed to step 8
+HTTP 201, treat the run as failed at this step — still proceed to step 8
 (archive + commit) so the attempt is recorded, but do not silently pretend
 it succeeded.
 

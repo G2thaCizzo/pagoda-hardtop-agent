@@ -17,15 +17,17 @@ coming from that automation as well as from manual edits.
 - Part of the broader [Pagoda](../CLAUDE.md) import project, but kept as its
   own repo/subfolder since it has its own automation lifecycle.
 - Email delivery deliberately avoids any OAuth connection to Glen's Gmail
-  account (explicit requirement) — uses a SendGrid send-only API key
-  instead, with Gmail only ever as the recipient.
+  account (explicit requirement) — uses a Brevo send-only API key
+  instead, with Gmail only ever as the recipient. Brevo was chosen over
+  SendGrid because SendGrid dropped its permanent free tier (now a 60-day
+  trial, then paid) — Brevo's free plan (300 emails/day) has no expiry.
 - Design rationale, source list, and known limitations are in
   `docs/superpowers/specs/2026-09-09-hardtop-agent-design.md`.
 
 ## Constraints
 - Follow workspace security rules: no credentials in files, HTTPS only, no
   sensitive data leakage.
-- No direct Gmail account connection/OAuth — SendGrid or equivalent
+- No direct Gmail account connection/OAuth — Brevo or equivalent
   send-only mechanism only.
 - Hardtop-only listings — discard full-car listings even if they mention a
   hardtop.

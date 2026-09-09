@@ -4,16 +4,16 @@
 
 **Goal:** Stand up a weekly cloud routine that searches UK/EU classifieds and W113 specialist sources for standalone Pagoda hardtops, emails Glen a summary (new listings first, rest by distance from London), and persists state between runs — without ever connecting to Glen's Gmail account.
 
-**Architecture:** A `RemoteTrigger` cloud routine (weekly cron) clones `G2thaCizzo/pagoda-hardtop-agent`, runs the prompt in `prompts/weekly_search.md` (WebSearch/WebFetch for listings, Bash for git and the Brevo HTTP call), and pushes updated state back to the repo each run. Email goes out via a Brevo send-only API key stored as a cloud-environment secret — no OAuth link to any real mailbox. (Brevo was chosen over SendGrid because SendGrid dropped its permanent free tier — now a 60-day trial only, then paid — while Brevo's free plan, 300 emails/day, has no expiry.)
+**Architecture:** A `RemoteTrigger` cloud routine (weekly cron) clones `G2thaCizzo/pagoda-hardtop-agent`, runs the prompt in `prompts/weekly_search.md` (WebSearch/WebFetch for listings, Bash for git and the Resend HTTP call), and pushes updated state back to the repo each run. Email goes out via a Resend send-only API key stored as a cloud-environment secret — no OAuth link to any real mailbox. (Two earlier choices were ruled out: SendGrid dropped its permanent free tier — now a 60-day trial only, then paid — and Brevo requires DKIM/DMARC domain verification Glen can't do without owning a domain. Resend's default `onboarding@resend.dev` sender is pre-authenticated and restricted to delivering only to the account's own signup email — exactly glendanielcooney@gmail.com, the one recipient needed here.)
 
-**Tech Stack:** Claude Code `RemoteTrigger` cloud routine (claude-sonnet-5), Brevo transactional email API (v3, HTTP/curl), git, JSON state file.
+**Tech Stack:** Claude Code `RemoteTrigger` cloud routine (claude-sonnet-5), Resend email API (HTTP/curl), git, JSON state file.
 
 **Spec:** `docs/superpowers/specs/2026-09-09-hardtop-agent-design.md`
 
 ## Global Constraints
 
 - No OAuth/direct connection to Glen's Gmail account, ever (explicit requirement).
-- No credentials committed to the repo or written to any file — the Brevo key lives only as a cloud-environment secret, read via `$BREVO_API_KEY`.
+- No credentials committed to the repo or written to any file — the Resend key lives only as a cloud-environment secret, read via `$RESEND_API_KEY`.
 - Hardtop-only listings — full-car listings are discarded even if they mention a hardtop.
 - A single source failing must not fail the whole run.
 - If zero listings are found across all sources, the run must still send an email saying so (this is the "something's broken" signal), never skip silently.
@@ -24,45 +24,39 @@
 
 ---
 
-### Task 1: Create and verify a Brevo sender identity
+### Task 1: Create a Resend account and API key
 
-This is a manual account-setup task Glen does with guidance — there is no code to write, but there is a concrete, checkable deliverable: a verified sender address and an API key.
+This is a manual account-setup task Glen does with guidance — there is no code to write, but there is a concrete, checkable deliverable: an account signed up with the right email, and an API key. Unlike SendGrid/Brevo, no separate sender-verification step is needed — Resend's default sending address is pre-authenticated.
 
 **Files:** none (external account setup only)
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: `VERIFIED_SENDER_ADDRESS` (string, an email address Glen controls and has clicked Brevo's confirmation link for) and a Brevo API key (string, held only in Brevo's dashboard at this point — not pasted anywhere yet). Task 2 and Task 3 both consume these.
+- Produces: confirmation that the Resend account's signup email is exactly `glendanielcooney@gmail.com`, and a Resend API key (string, held only in Resend's dashboard at this point — not pasted anywhere yet). Task 2 consumes the key; Task 3 needs no address substitution this time (the sender is fixed as `onboarding@resend.dev`, already correct in `prompts/weekly_search.md`).
 
-- [ ] **Step 1: Create a free Brevo account**
+- [ ] **Step 1: Create a free Resend account**
 
-Go to https://www.brevo.com/, sign up with an email address Glen controls (can be the Gmail address itself, or any other address he has access to — Brevo never gets any access to that mailbox, it only sends a one-time confirmation link to it). Free plan (300 emails/day, no expiry) is more than enough for one email/week.
+Go to https://resend.com/signup and sign up using **exactly** `glendanielcooney@gmail.com` — this must match, since Resend's default sender can only deliver to the account's own signup address. Free plan (3,000 emails/month) is far more than needed for one email/week.
 
-- [ ] **Step 2: Verify a sender identity**
+- [ ] **Step 2: Create an API key**
 
-In the Brevo dashboard: Settings (or Senders, Domains & Dedicated IPs) → Senders → "Add a Sender". Fill in the sender name (e.g. "Pagoda Hardtop Watch") and the from-address (the address from Step 1, or a different one Glen controls — e.g. `glen.hardtop.watch@gmail.com` works fine as a "from" if he wants to keep it separate from his main inbox, since Brevo only needs to confirm he can receive a code/link there once). Click the confirmation link/enter the code Brevo sends to that address.
-
-Record the exact verified address — this is `VERIFIED_SENDER_ADDRESS`, needed in Task 3.
-
-- [ ] **Step 3: Create an API key**
-
-Settings → SMTP & API → API Keys → "Generate a new API key". Name it `pagoda-hardtop-watch`. Copy the generated key immediately (Brevo shows it once).
+In the Resend dashboard: API Keys → "Create API Key". Name it `pagoda-hardtop-watch`. Permission: "Sending access" only if that option is offered (not full account access). Copy the generated key immediately (Resend shows it once).
 
 **Do not paste the key into chat or save it to any file in this repo or workspace.** It goes directly into the cloud environment's secret store in Task 2.
 
-- [ ] **Step 4: Confirm deliverable**
+- [ ] **Step 3: Confirm deliverable**
 
-Glen confirms in chat: "sender verified, key created" (without pasting the key). This unblocks Task 2.
+Glen confirms in chat: "account created with the right email, key created" (without pasting the key). This unblocks Task 2. (No Task 3 file edit is needed this time — skip straight to Task 2, then Task 4.)
 
 ---
 
-### Task 2: Store the Brevo API key as a cloud-environment secret
+### Task 2: Store the Resend API key as a cloud-environment secret
 
 **Files:** none (cloud environment configuration, outside this repo)
 
 **Interfaces:**
 - Consumes: the API key from Task 1 (never handled by the assistant directly — Glen enters it himself)
-- Produces: `BREVO_API_KEY` readable as an environment variable inside any cloud routine run using environment `env_01FAt9bWaCD17d2ri4J7MtLj`. Task 4's routine and Task 5/6's manual runs both consume this.
+- Produces: `RESEND_API_KEY` readable as an environment variable inside any cloud routine run using environment `env_01FAt9bWaCD17d2ri4J7MtLj`. Task 4's routine and Task 5/6's manual runs both consume this.
 
 - [ ] **Step 1: Open the environment's secret settings**
 
@@ -70,7 +64,7 @@ Go to https://claude.ai/code/environments, open the "Default" environment (`env_
 
 - [ ] **Step 2: Add the secret**
 
-Add a secret named exactly `BREVO_API_KEY` with the value from Task 1 Step 3. Save.
+Add a secret named exactly `RESEND_API_KEY` with the value from Task 1 Step 2. Save.
 
 - [ ] **Step 3: Confirm deliverable**
 
@@ -78,39 +72,32 @@ Glen confirms in chat: "secret added" (without pasting the value). If this envir
 
 ---
 
-### Task 3: Fill in the verified sender address and finalize the prompt
+### Task 3: Verify the prompt file is placeholder-free and ready
 
-The prompt content already exists at `prompts/weekly_search.md` with a placeholder `VERIFIED_SENDER_ADDRESS` in the Brevo payload example (Section 7). This task replaces that placeholder with the real address from Task 1 and commits the final version — this is the exact text that becomes the routine's instructions in Task 4.
+Unlike SendGrid/Brevo, Resend needs no sender address substitution — `prompts/weekly_search.md` already has the real, final `onboarding@resend.dev` sender hard-coded in Section 7. This task is a final read-through check before that content becomes the routine's live instructions in Task 4, not an edit.
 
 **Files:**
-- Modify: `Hard Top Agent/prompts/weekly_search.md` (the `VERIFIED_SENDER_ADDRESS` line in the JSON example under "## 7. Send the email")
+- Verify only: `Hard Top Agent/prompts/weekly_search.md`
 
 **Interfaces:**
-- Consumes: `VERIFIED_SENDER_ADDRESS` from Task 1
-- Produces: final prompt text (string) — Task 4 copies this file's content verbatim into the routine's `events[].data.message.content`.
+- Consumes: nothing new (the file is already in its final state)
+- Produces: confirmed-final prompt text (string) — Task 4 copies this file's content verbatim into the routine's `events[].data.message.content`.
 
-- [ ] **Step 1: Edit the placeholder**
+- [ ] **Step 1: Read the full file**
 
-In `prompts/weekly_search.md`, replace:
-```
-"from": {"email": "VERIFIED_SENDER_ADDRESS"},
-```
-with the real address, e.g.:
-```
-"from": {"email": "glen.hardtop.watch@gmail.com"},
-```
-Also update the sentence below it that says "Replace `VERIFIED_SENDER_ADDRESS` with..." — delete that instruction since it's now resolved (the file should read as ready-to-use, not as a template).
+Read `prompts/weekly_search.md` end to end.
 
 - [ ] **Step 2: Verify no placeholder text remains**
 
-Read the full file back and confirm no `VERIFIED_SENDER_ADDRESS` or other bracketed placeholder remains anywhere in it.
+Confirm there is no `VERIFIED_SENDER_ADDRESS`, `SUBJECT_HERE`, `HTML_BODY_HERE`, or other bracketed/templated placeholder left unresolved anywhere — `SUBJECT_HERE` and `HTML_BODY_HERE` are intentional (the routine fills those in itself at runtime from the listings it finds, they are not setup placeholders). Confirm Section 7's `from` field reads `"Pagoda Hardtop Watch <onboarding@resend.dev>"` and the `to` field reads `["glendanielcooney@gmail.com"]`.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: No commit needed**
 
+If Step 2 found nothing to fix, there's nothing to commit — proceed to Task 4. If it did find something, fix it, then:
 ```bash
 cd "Hard Top Agent"
 git add prompts/weekly_search.md
-git commit -m "Fill in verified Brevo sender address in weekly prompt"
+git commit -m "Fix outstanding placeholder in weekly prompt"
 git push
 ```
 
@@ -188,7 +175,7 @@ Call `RemoteTrigger` `action: "run"` with the `trigger_id` from Task 4.
 
 Poll `RemoteTrigger` `action: "list_runs"` for the new session, then `action: "get_run_log"` on it. Expected: no permission denials, no unhandled tool errors; the log shows sources being searched, an email send attempt, and a git commit/push.
 
-Note: the first run should log an HTTP 201 from the Brevo call. If it doesn't, stop here — check Task 1/2 (sender verification, secret name/value) before re-running, rather than re-running blindly.
+Note: the first run should log an HTTP 200 from the Resend call. If it doesn't, stop here — check Task 1/2 (account signup email matches the recipient exactly, secret name/value) before re-running, rather than re-running blindly.
 
 - [ ] **Step 3: Confirm the email arrived**
 
@@ -228,6 +215,6 @@ Check the resulting email/log: listings present in `state/seen_listings.json` fr
 
 ## Self-review notes
 
-- Spec coverage: sources list, extraction fields, GBP conversion, distance estimate, diff logic, email structure, error handling (single-source failure, zero-results case, state corruption), archiving, and the no-Gmail-OAuth constraint are all covered in `prompts/weekly_search.md` (Task 3) and enforced structurally by Task 1/2 (Brevo, not Gmail).
-- The one open risk flagged rather than assumed away: Task 2 Step 3 explicitly stops and reports back if the "Default" cloud environment doesn't support custom secrets, instead of guessing at a workaround.
-- Reused the same `trigger_id` and `VERIFIED_SENDER_ADDRESS` terms consistently across Tasks 1, 3, 4, 5, 6 — no renamed variables between tasks.
+- Spec coverage: sources list, extraction fields, GBP conversion, distance estimate, diff logic, email structure, error handling (single-source failure, zero-results case, state corruption), archiving, and the no-Gmail-OAuth constraint are all covered in `prompts/weekly_search.md` and enforced structurally by Task 1/2 (Resend, not Gmail).
+- The one open risk flagged rather than assumed away: Task 2 Step 2 explicitly stops and reports back if the "Default" cloud environment doesn't support custom secrets, instead of guessing at a workaround.
+- Reused `trigger_id` consistently across Tasks 4, 5, 6. `VERIFIED_SENDER_ADDRESS` no longer applies (Resend's sender is fixed, not per-account) — Task 3 was rewritten as a verification-only step rather than left as a stale reference to a resolved-elsewhere placeholder.

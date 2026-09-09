@@ -17,17 +17,22 @@ coming from that automation as well as from manual edits.
 - Part of the broader [Pagoda](../CLAUDE.md) import project, but kept as its
   own repo/subfolder since it has its own automation lifecycle.
 - Email delivery deliberately avoids any OAuth connection to Glen's Gmail
-  account (explicit requirement) — uses a Brevo send-only API key
-  instead, with Gmail only ever as the recipient. Brevo was chosen over
-  SendGrid because SendGrid dropped its permanent free tier (now a 60-day
-  trial, then paid) — Brevo's free plan (300 emails/day) has no expiry.
+  account (explicit requirement) — uses a Resend send-only API key
+  instead, with Gmail only ever as the recipient. Landed on Resend after
+  two false starts: SendGrid dropped its permanent free tier (now a
+  60-day trial, then paid), and Brevo requires DKIM/DMARC domain
+  verification that isn't possible without owning a domain. Resend's
+  default `onboarding@resend.dev` sender is pre-authenticated and can
+  only deliver to the Resend account's own signup email — since that's
+  glendanielcooney@gmail.com, the one recipient this needs, that
+  restriction is actually a perfect fit, not a limitation.
 - Design rationale, source list, and known limitations are in
   `docs/superpowers/specs/2026-09-09-hardtop-agent-design.md`.
 
 ## Constraints
 - Follow workspace security rules: no credentials in files, HTTPS only, no
   sensitive data leakage.
-- No direct Gmail account connection/OAuth — Brevo or equivalent
+- No direct Gmail account connection/OAuth — Resend or equivalent
   send-only mechanism only.
 - Hardtop-only listings — discard full-car listings even if they mention a
   hardtop.

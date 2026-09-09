@@ -104,15 +104,14 @@ One HTML email, structure:
 
 ## 7. Send the email
 
-POST to Brevo's transactional email API using the API key from the
-`BREVO_API_KEY` environment variable (already set on this cloud
-environment — read it via Bash, never print it, never write it to any
-file):
+POST to Resend's email API using the API key from the `RESEND_API_KEY`
+environment variable (already set on this cloud environment — read it via
+Bash, never print it, never write it to any file):
 
 ```bash
 curl -s -w "\n%{http_code}\n" --request POST \
-  --url https://api.brevo.com/v3/smtp/email \
-  --header "api-key: $BREVO_API_KEY" \
+  --url https://api.resend.com/emails \
+  --header "Authorization: Bearer $RESEND_API_KEY" \
   --header "Content-Type: application/json" \
   --data @email_payload.json
 ```
@@ -122,20 +121,18 @@ delete it after sending) as:
 
 ```json
 {
-  "sender": {"email": "VERIFIED_SENDER_ADDRESS", "name": "Pagoda Hardtop Watch"},
-  "to": [{"email": "glendanielcooney@gmail.com"}],
+  "from": "Pagoda Hardtop Watch <onboarding@resend.dev>",
+  "to": ["glendanielcooney@gmail.com"],
   "subject": "SUBJECT_HERE",
-  "htmlContent": "HTML_BODY_HERE"
+  "html": "HTML_BODY_HERE"
 }
 ```
 
-Replace `VERIFIED_SENDER_ADDRESS` with the address verified in Brevo
-(filled in when this routine was configured — see the routine's stored
-prompt if you need to check it, it should already be correct in this file
-by the time you're reading it). If the send returns anything other than
-HTTP 201, treat the run as failed at this step — still proceed to step 8
-(archive + commit) so the attempt is recorded, but do not silently pretend
-it succeeded.
+`onboarding@resend.dev` is Resend's own pre-authenticated sending address
+— do not change it, and do not attempt to verify a custom domain (not
+needed here). If the send returns anything other than HTTP 200, treat the
+run as failed at this step — still proceed to step 8 (archive + commit) so
+the attempt is recorded, but do not silently pretend it succeeded.
 
 ## 8. Archive and update state
 

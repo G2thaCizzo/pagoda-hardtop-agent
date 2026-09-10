@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#222;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:6px;overflow:hidden;">
+          <tr>
+            <td style="background:#1a2b3c;padding:20px 24px;">
+              <h1 style="margin:0;color:#ffffff;font-size:20px;">Pagoda Hardtop Watch</h1>
+              <div style="color:#c9d4de;font-size:13px;margin-top:4px;">10 September 2026</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <div style="background:#fff3cd;border:1px solid #ffe08a;border-radius:4px;padding:14px 16px;margin-bottom:20px;">
+                <strong style="color:#8a6d1a;">No listings found this run — likely a broken search, not an empty market.</strong>
+                <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#5c4a12;">
+                  0 listings found, 0 new. This run's underlying network access could not
+                  reach any external classifieds site at all (confirmed even against
+                  unrelated general sites, not just car listing sites), so every source
+                  below was blocked before a single listing page could be checked. This
+                  is a run-infrastructure problem, not a signal that no hardtops are
+                  currently for sale — please check the run log / environment network
+                  policy before assuming the market is genuinely empty this week.
+                </p>
+              </div>
+
+              <h2 style="font-size:15px;margin:0 0 8px;">Sources not checked this run</h2>
+              <p style="font-size:13px;line-height:1.6;color:#444;margin:0 0 20px;">
+                All sources were blocked at the network level: eBay UK, Gumtree, PistonHeads (UK) &middot;
+                eBay Kleinanzeigen (DE) &middot; LeBonCoin (FR) &middot; Marktplaats (NL) &middot;
+                2ememain, AutoScout24.be (BE) &middot; Coches.net, Wallapop (ES) &middot;
+                Subito.it (IT) &middot; willhaben (AT) &middot; StandVirtual.pt (PT) &middot;
+                Blocket (SE) &middot; DBA.dk (DK) &middot; Hasznaltauto.hu (HU) &middot;
+                AutoScout24.com, sl113.org, Pagoda SL Group, Bring a Trailer, The MB Market (cross-EU/specialist).
+              </p>
+
+              <h2 style="font-size:15px;margin:0 0 8px;">What happened</h2>
+              <p style="font-size:13px;line-height:1.6;color:#444;margin:0 0 20px;">
+                Web search (which finds pages by keyword) still worked, but it only
+                returned generic parts listings, storage-accessory retailers, and
+                full-car auction copy — not live classified pages. Fetching any actual
+                listing page to verify it (price, location, current availability,
+                condition, photo) was denied by the environment's outbound network
+                policy for every domain tried, including sites unrelated to car
+                classifieds. Rather than guess at prices or locations from unverifiable
+                search snippets, or claim a listing is still live when it can't be
+                confirmed, this run is reporting nothing found rather than fabricating
+                entries.
+              </p>
+
+              <h2 style="font-size:15px;margin:0 0 8px;">Next steps</h2>
+              <p style="font-size:13px;line-height:1.6;color:#444;margin:0;">
+                Check the routine's run log and the environment's network egress
+                configuration — outbound access to classifieds sites (and, in this
+                run, to essentially all external sites) needs to be allowed for the
+                weekly search to actually work. No changes have been made to
+                <code>state/seen_listings.json</code> this run.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px;background:#fafafa;border-top:1px solid #eee;font-size:11px;color:#999;">
+              Pagoda Hardtop Watch — automated weekly search, W113 hardtop-only (230SL/250SL/280SL-compatible), UK &amp; Europe.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -163,27 +163,43 @@ Call `RemoteTrigger` with `action: "create"` and body:
 - Consumes: `trigger_id` from Task 4
 - Produces: a verified-working routine — Task 6 consumes this working state to test the dedup behavior.
 
-- [ ] **Step 1: Trigger a manual run**
+- [x] **Step 1: Trigger a manual run**
 
-Call `RemoteTrigger` `action: "run"` with the `trigger_id` from Task 4.
+Called `RemoteTrigger` `action: "run"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez` — session `cse_01Puxd5YnkvYRsQvQdwc9FVe`.
 
-- [ ] **Step 2: Watch the run log**
+- [x] **Step 2: Watch the run log**
 
-Poll `RemoteTrigger` `action: "list_runs"` for the new session, then `action: "get_run_log"` on it. Expected: no permission denials, no unhandled tool errors; the log shows sources being searched, an email send attempt, and a git commit/push.
+Reviewed via `get_run_log`. The `send-email` tool call to the Resend connector succeeded on the first try (`Email sent successfully! {"id":"6439057d-db3b-47b6-9e58-2293779bd723"}`) — no permission issues, confirming Task 2's connector setup works correctly.
 
-Note: the first run should show a successful `send-email` tool call to the Resend connector in the log. If it shows a permission denial instead, the "Send Email" tool permission (Task 2 Step 2) isn't actually set to Allow — fix that before re-running, rather than re-running blindly.
+**Finding:** the run also discovered that this cloud sandbox blocks all outbound WebFetch/curl to external domains (tested and confirmed against unrelated sites too, e.g. Wikipedia — a blanket egress restriction, not per-source). Only WebSearch works. Since every candidate listing needs page verification to confirm price/location/status, and none of that was possible, the routine correctly treated this as the zero-listings "something's broken" case per the spec, sent an honest email explaining it, left `state/seen_listings.json` untouched, and committed `runs/2026-09-10.html`. This is correct behavior for what happened, but means the original page-fetch-based design can't work in this sandbox — see the spec's Known Limitations for the reworked snippet-only approach, now reflected in `prompts/weekly_search.md`.
 
-- [ ] **Step 3: Confirm the email arrived**
+- [x] **Step 3: Confirm the email arrived**
 
-Glen checks glendanielcooney@gmail.com for "Pagoda Hardtop Watch — ... — N new". Confirm: thumbnails render, listing links open correctly, the New-listings section (if any) appears before the by-distance section, and any "source not checked" notes read sensibly.
+Glen confirmed receipt of the "no listings found — network blocked" email.
 
-- [ ] **Step 4: Confirm state and archive were committed**
+- [ ] **Step 4: Update the live routine with the reworked prompt**
+
+`prompts/weekly_search.md` was rewritten after this run to extract listing details from WebSearch snippets directly (title/price/location/condition where the snippet shows them, no thumbnail/posted-date, `site:`-scoped queries per source) instead of relying on WebFetch. Read the file's current content (from the `---` separator onward, same as Task 4 Step 2) and push it to the live routine:
+
+```
+RemoteTrigger action: "update", trigger_id: "trig_016X2UagUegJcG4Lid62r8Ez", body: {
+  "job_config": { "ccr": { "events": [ {"data": { "uuid": "<fresh v4 uuid>", "session_id": "", "type": "user", "parent_tool_use_id": null, "message": {"content": "<updated prompt content>", "role": "user"} }} ] } }
+}
+```
+
+- [ ] **Step 5: Trigger a second manual run against the reworked prompt**
+
+Call `RemoteTrigger` `action: "run"` with the same `trigger_id`. Watch the log the same way as Step 2.
+
+Expected this time: `site:`-scoped WebSearch calls per source, at least some candidate listings extracted from snippets (price/location may be `null` for many — that's expected, not a bug), an email with a New-listings section, and a successful commit of a non-empty `state/seen_listings.json`. If it's *still* zero listings, that's a real "no hardtops currently listed" or "WebSearch itself isn't surfacing them" signal worth a closer look — not necessarily another platform bug, since WebSearch (unlike WebFetch) did work in the first run.
+
+- [ ] **Step 6: Confirm state and archive were committed**
 
 ```bash
 cd "Hard Top Agent"
 git pull
 ```
-Confirm `state/seen_listings.json` is no longer `[]` (assuming at least one listing was found) and a new `runs/<date>.html` file exists matching the email content.
+Confirm `state/seen_listings.json` reflects Step 5's findings and a new `runs/<date>.html` file exists matching that run's email content.
 
 ---
 

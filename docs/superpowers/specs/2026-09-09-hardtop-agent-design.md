@@ -62,19 +62,31 @@ pagoda-hardtop-agent/
 
 1. Read `state/seen_listings.json`.
 2. Search each source (see Sources below) for W113-compatible hardtop-only
-   listings, using language-appropriate search terms per country.
-3. For each candidate listing, extract: title, price + currency, town/
-   country, listing URL, thumbnail image URL, condition notes, date posted
-   if available. Discard anything that is clearly a full car, not a
-   standalone hardtop.
-4. Convert price to approximate GBP (note it's approximate).
+   listings, using `site:`-scoped WebSearch queries with language-
+   appropriate terms per country. **WebFetch and raw HTTP calls to
+   external domains are blocked in the cloud sandbox** (confirmed during
+   testing — even Wikipedia/Google failed; this is a blanket egress
+   restriction, not per-source) — only WebSearch works, so extraction is
+   snippet-only (see step 3), not page-verified.
+3. For each candidate listing, extract from the WebSearch snippet alone:
+   title, price + currency (if shown), town/country (if shown), listing
+   URL, condition notes (if the snippet mentions any). No thumbnail, no
+   posted date — not available without fetching the page. Discard
+   anything that is a full car (not a standalone hardtop) or a hardtop
+   accessory (cover, stand, trim, hardware) rather than the roof itself.
+   Every listing is unverified as still active, since its page can't be
+   opened to check.
+4. Convert price to approximate GBP where a price was found (note it's
+   approximate).
 5. Estimate straight-line distance from London (51.5074, -0.1278) to the
-   listing's town.
+   listing's town, where a town was found.
 6. Diff against `state/seen_listings.json` by listing URL: not present →
    "New"; present → "Seen before".
-7. Build one HTML email: New listings first (full detail incl. thumbnail),
-   then the rest sorted by distance ascending. Note any source that
-   couldn't be checked this run.
+7. Build one HTML email: New listings first (title, price/location where
+   known, distance where known, condition notes where known), then the
+   rest sorted by distance ascending (unknown-distance listings grouped
+   last). Note any source that returned nothing usable this run, and that
+   all listings are unverified as still active.
 8. Send via Resend.
 9. Archive the same HTML to `runs/YYYY-MM-DD.html`.
 10. Add any new listings to `state/seen_listings.json`; commit and push.
@@ -98,13 +110,28 @@ Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
 
 ## Known limitations
 
-- **Best-effort coverage, not exhaustive.** This uses web search + page
-  fetch, not a dedicated scraper per site. Sites that resist search
-  indexing or block fetches (AutoScout24, Marktplaats and LeBonCoin can be
-  aggressive about this) may be under-represented some weeks — the email
-  will note when a source couldn't be checked.
+- **Search-only, no page verification — this is a hard platform
+  constraint, not a design choice.** The cloud routine's sandbox blocks
+  all outbound web fetches (WebFetch, curl) to external domains; only
+  WebSearch works, because it's proxied through Anthropic's own
+  infrastructure. Discovered during the first test run (2026-09-10), which
+  found curl failing against every domain tested, including unrelated
+  ones like Wikipedia — confirming it's a blanket environment restriction,
+  not something fixable per-source. Every listing in the email is
+  therefore found-via-search and **unverified as still for sale** — no way
+  to confirm the page is live, that the item hasn't sold, or to read full
+  condition detail beyond what the search snippet shows.
+- **Price, location, condition, thumbnail, and posted-date are frequently
+  missing.** A search snippet doesn't reliably carry structured data —
+  price/location are included only when the snippet's few lines of text
+  happen to show them. Thumbnails and posted-dates aren't available from
+  a snippet at all and are always `null`.
+- **Best-effort coverage, not exhaustive.** Sites that resist search
+  indexing may be under-represented some weeks — the email notes when a
+  source returned nothing usable.
 - **Approximate GBP conversion and distance.** Good enough for at-a-glance
-  triage, not exact.
+  triage, not exact — and distance is only computed when a location was
+  found.
 - **Best-effort deduplication.** The same hardtop cross-posted to two
   sites may appear twice.
 
@@ -130,20 +157,30 @@ Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
    equivalent: no key is ever handled by the assistant or stored in any
    file.)
 4. The `RemoteTrigger` routine itself created (cron, prompt, repo source,
-   Resend connector attached via `mcp_connections`) — pending, part of the
-   implementation plan.
+   Resend connector attached via `mcp_connections`) — done
+   (`trig_016X2UagUegJcG4Lid62r8Ez`).
 
 ## Testing
 
 - After routine creation, trigger one manual run (`RemoteTrigger`
   `action: "run"`) before relying on the weekly cadence.
 - Review the run log (`get_run_log`) for tool errors / permission denials.
-- Confirm the email arrives, renders correctly (thumbnails load, links
-  work), and correctly separates New vs by-distance sections.
+- Confirm the email arrives and correctly separates New vs by-distance
+  sections.
 - Confirm `state/seen_listings.json` and `runs/*.html` are committed and
   pushed after the run.
 - Run a second manual trigger shortly after to confirm nothing from the
   first run gets re-flagged as "New".
+
+**First test run (2026-09-10):** email send via the Resend connector
+worked correctly (no permission issues, delivered successfully). However,
+it surfaced the sandbox network-egress constraint described under Known
+limitations — WebFetch/curl are blocked entirely, so the run correctly
+found zero *verifiable* listings and sent the designed "something's
+broken" email rather than fabricate data. The prompt was reworked
+afterward to extract from WebSearch snippets directly (no page fetch) —
+that revision still needs its own manual test run to confirm it actually
+surfaces usable candidates within this constraint.
 
 ## Files in this folder
 

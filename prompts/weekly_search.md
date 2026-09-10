@@ -26,42 +26,67 @@ run).
 
 Find standalone Mercedes-Benz W113 "Pagoda" hardtops for sale — compatible
 with the 230SL, 250SL and 280SL (the hardtop shape is shared across the
-range). **Hardtop only.** Discard anything that is a full car for sale, even
-if the listing text mentions the hardtop is original/included — this search
-is not for cars.
+range). **Hardtop only, and the actual roof shell itself.** Discard:
+- anything that is a full car for sale, even if the listing text mentions
+  the hardtop is original/included — this search is not for cars.
+- accessories and parts that are not the hardtop shell itself: covers,
+  storage bags, carts/stands, trim (wood or chrome), hinges, seals,
+  hardware kits, model/toy hardtops, or hardtop-shaped decor items. Only
+  the actual roof.
 
-Use WebSearch (and WebFetch on promising result pages) against each source
-below, with the search terms shown. Try each source; if a source returns
-nothing useful or the fetch is blocked/errors, move on and note it in the
-"sources not checked" list for the email — do not let one source's failure
-stop the run.
+**Known sandbox constraint — read before searching:** this environment's
+outbound network access blocks WebFetch and any direct HTTP call
+(confirmed: even fetching Wikipedia or Google directly fails here) — only
+`WebSearch` works, because it's proxied through Anthropic's own
+infrastructure rather than this sandbox's direct internet access. This
+means you **cannot** open a listing page to confirm it's still active,
+verify price, or read full condition details — you can only work from
+what WebSearch's result snippets show you (title, URL, and a short text
+excerpt). Do not attempt WebFetch or curl against classifieds sites —
+it will fail every time; don't waste turns re-testing this.
 
-| Country | Source(s) | Local search terms to combine with "W113 / Pagoda / 230SL / 250SL / 280SL" |
+For each source below, run a WebSearch using the `site:` operator shown
+(this biases results toward that actual domain rather than generic SEO/
+retailer noise) combined with "W113 hardtop" or "Pagoda hardtop" and the
+local-language term. Try each source; if a source's search returns
+nothing useful, move on and note it in the "sources not checked" list for
+the email — do not let one source's failure stop the run.
+
+| Country | Source(s) | Example WebSearch query |
 |---|---|---|
-| UK | eBay UK, Gumtree, PistonHeads classifieds | hardtop |
-| Germany | eBay Kleinanzeigen | Hartschalendach, Hardtop |
-| France | LeBonCoin | toit rigide, hardtop |
-| Netherlands | Marktplaats | hardtop, kap |
-| Belgium | 2ememain, AutoScout24.be | hardtop |
-| Spain | Coches.net, Wallapop | techo rígido, capota dura |
-| Italy | Subito.it | capote rigida, hard top |
-| Austria | willhaben | Hardtop |
-| Portugal | StandVirtual.pt | capota rígida, hardtop |
-| Sweden | Blocket | hardtop |
-| Denmark | DBA.dk | hardtop |
-| Hungary | Hasznaltauto.hu | kemény tető |
-| Cross-EU / specialist | AutoScout24.com, sl113.org classifieds/forum, Pagoda SL Group (Facebook is out of reach — skip if login-walled), Bring a Trailer, The MB Market | hardtop |
+| UK | eBay UK, Gumtree, PistonHeads classifieds | `site:ebay.co.uk W113 Pagoda hardtop`, `site:gumtree.com Mercedes Pagoda hardtop`, `site:pistonheads.com W113 hardtop` |
+| Germany | eBay Kleinanzeigen | `site:kleinanzeigen.de W113 Hartschalendach Pagode` |
+| France | LeBonCoin | `site:leboncoin.fr W113 Pagode toit rigide` |
+| Netherlands | Marktplaats | `site:marktplaats.nl W113 Pagode hardtop kap` |
+| Belgium | 2ememain, AutoScout24.be | `site:2ememain.be W113 hardtop`, `site:autoscout24.be W113 hardtop` |
+| Spain | Coches.net, Wallapop | `site:coches.net W113 techo rígido Pagoda`, `site:wallapop.com W113 capota dura` |
+| Italy | Subito.it | `site:subito.it W113 capote rigida Pagoda` |
+| Austria | willhaben | `site:willhaben.at W113 Hardtop Pagode` |
+| Portugal | StandVirtual.pt | `site:standvirtual.com W113 capota rígida hardtop` |
+| Sweden | Blocket | `site:blocket.se W113 Pagoda hardtop` |
+| Denmark | DBA.dk | `site:dba.dk W113 Pagoda hardtop` |
+| Hungary | Hasznaltauto.hu | `site:hasznaltauto.hu W113 Pagoda kemény tető` |
+| Cross-EU / specialist | AutoScout24.com, sl113.org classifieds/forum, Bring a Trailer, The MB Market | `site:autoscout24.com W113 hardtop`, `site:sl113.org hardtop for sale`, `site:bringatrailer.com W113 hardtop`, `site:thembmarket.com W113 hardtop` |
 
-For every candidate listing you find, extract:
-- `title`
-- `price` and `currency` (as listed — may be EUR, GBP, SEK, DKK, HUF etc.)
-- `location` (town/region + country, as best you can tell from the listing)
+For every candidate result whose URL is actually on the target domain (not
+a retailer/parts/SEO page unrelated to that specific source), extract from
+the WebSearch snippet alone:
+- `title` (from the search result)
+- `price` and `currency` if visible in the snippet text (as shown — may be
+  EUR, GBP, SEK, DKK, HUF etc.); `null` if not shown in the snippet
+- `location` (town/region + country) if visible in the snippet; `null` if
+  not shown
 - `url` (the canonical listing URL)
-- `thumbnail` (a direct image URL from the listing, if available)
-- `condition_notes` (one short line — e.g. "good condition, no cracks
-  mentioned" or "damaged, sold as repair project" — your own summary of
-  what the listing says about condition)
-- `posted_date` if the listing shows one, else null
+- `thumbnail`: `null` — not available without fetching the page, do not
+  guess an image URL
+- `condition_notes`: whatever the snippet text says about condition, or
+  `null` if the snippet doesn't mention it — do not invent detail beyond
+  what the snippet actually shows
+- `posted_date`: `null` — not reliably available from a snippet
+
+Every listing is **unverified** — found via search, not confirmed still
+for sale, since the page itself can't be opened. Say this plainly in the
+email (see step 6) rather than implying these are live-checked.
 
 ## 3. Convert price to approximate GBP
 
@@ -72,11 +97,13 @@ apply them. Round to the nearest £10. Label this as "approx." in the email
 
 ## 4. Estimate distance from London
 
-London is fixed at 51.5074° N, -0.1278° E. For each listing's town, use your
-own knowledge of that town's approximate coordinates (or one WebSearch if
-you're not confident) and compute great-circle distance in miles using the
-haversine formula. This is for rough sorting, not precision — a nearest-10-
-mile estimate is fine.
+London is fixed at 51.5074° N, -0.1278° E. For each listing with a known
+location, use your own knowledge of that town's approximate coordinates
+(or one WebSearch if you're not confident) and compute great-circle
+distance in miles using the haversine formula. This is for rough sorting,
+not precision — a nearest-10-mile estimate is fine. If `location` is
+`null`, skip distance entirely for that listing (see step 6 for where it
+goes in the email).
 
 ## 5. Diff against state
 
@@ -90,13 +117,19 @@ One HTML email, structure:
 
 1. Subject: `Pagoda Hardtop Watch — <today's date> — <N> new`
 2. Short header line: date, total listings found, how many new, list any
-   sources you couldn't check this run (e.g. "Marktplaats blocked this
-   run").
-3. **New listings** section first (if any): each as a block with
-   thumbnail, title (linked to the listing URL), price (original + approx
-   GBP), location, estimated distance from London, condition notes.
+   sources you couldn't check this run (e.g. "no usable results this run"),
+   and a one-line note that all listings are found-via-search and
+   unverified as still active (no page fetch is possible in this
+   environment — see step 2).
+3. **New listings** section first (if any): each as a block with title
+   (linked to the listing URL), price (original + approx GBP, or "not
+   shown" if the snippet didn't include one), location (or "not shown"),
+   estimated distance from London (only if location is known), and
+   condition notes (or omit the line entirely if null). No thumbnail —
+   not available from a search snippet.
 4. **All other listings** section: same block format, sorted by estimated
-   distance ascending.
+   distance ascending (listings with no known location go last, grouped
+   under "distance unknown").
 5. If literally zero listings were found across every source, still send
    the email — header should say so plainly (e.g. "No listings found this
    run — this may mean sources are blocked; check the run log"). This is

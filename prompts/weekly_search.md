@@ -153,7 +153,10 @@ environment; authentication is handled entirely by the connector). Call
 its email-sending tool (action name `send-email`) with:
 
 - `to`: `["glendanielcooney@gmail.com"]`
-- `from`: `"Pagoda Hardtop Watch <onboarding@resend.dev>"`
+- `from`: `Pagoda Hardtop Watch <onboarding@resend.dev>` — literal angle
+  brackets, not HTML-entity-encoded (`&lt;`/`&gt;`); Resend's API rejects
+  the encoded form (confirmed in testing — this field is a plain header
+  value, not HTML, even though `html` right below it is HTML)
 - `subject`: SUBJECT_HERE
 - `html`: HTML_BODY_HERE
 - `text`: a short plain-text fallback with the same content (required —

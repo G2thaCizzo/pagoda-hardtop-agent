@@ -148,9 +148,9 @@ Call `RemoteTrigger` with `action: "create"` and body:
 }
 ```
 
-- [ ] **Step 4: Record the trigger ID**
+- [x] **Step 4: Record the trigger ID**
 
-Note the `trigger_id` returned. Confirm the routine appears via `RemoteTrigger` `action: "list"`.
+`trigger_id: trig_016X2UagUegJcG4Lid62r8Ez` — https://claude.ai/code/routines/trig_016X2UagUegJcG4Lid62r8Ez. Created 2026-09-10; `next_run_at` 2026-09-14T06:08:57Z (Monday, on schedule).
 
 ---
 

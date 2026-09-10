@@ -177,29 +177,24 @@ Reviewed via `get_run_log`. The `send-email` tool call to the Resend connector s
 
 Glen confirmed receipt of the "no listings found — network blocked" email.
 
-- [ ] **Step 4: Update the live routine with the reworked prompt**
+- [x] **Step 4: Update the live routine with the reworked prompt**
 
-`prompts/weekly_search.md` was rewritten after this run to extract listing details from WebSearch snippets directly (title/price/location/condition where the snippet shows them, no thumbnail/posted-date, `site:`-scoped queries per source) instead of relying on WebFetch. Read the file's current content (from the `---` separator onward, same as Task 4 Step 2) and push it to the live routine:
+`prompts/weekly_search.md` was rewritten after this run to extract listing details from WebSearch snippets directly (title/price/location/condition where the snippet shows them, no thumbnail/posted-date, `site:`-scoped queries per source) instead of relying on WebFetch. Pushed to the live routine via `RemoteTrigger` `action: "update"`.
 
-```
-RemoteTrigger action: "update", trigger_id: "trig_016X2UagUegJcG4Lid62r8Ez", body: {
-  "job_config": { "ccr": { "events": [ {"data": { "uuid": "<fresh v4 uuid>", "session_id": "", "type": "user", "parent_tool_use_id": null, "message": {"content": "<updated prompt content>", "role": "user"} }} ] } }
-}
-```
+- [x] **Step 5: Trigger a second manual run against the reworked prompt**
 
-- [ ] **Step 5: Trigger a second manual run against the reworked prompt**
+Called `RemoteTrigger` `action: "run"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez` — session `cse_01LDcpDDu3S3hkp3aQ67nkpk`. Result: the snippet-only approach works — searched all 13 sources via `site:`-scoped WebSearch, found 2 verifiable standalone-hardtop listings (both eBay UK; every other source returned only full cars, accessories, or category pages with no confirmable individual listing URL), sent the email successfully via the Resend connector, and committed.
 
-Call `RemoteTrigger` `action: "run"` with the same `trigger_id`. Watch the log the same way as Step 2.
+**Second finding, fixed inline:** this run hit a real git issue — the sandbox checks out a **detached HEAD** each run rather than a checked-out `main` branch, and local `main` had gone stale after the first run (still pointing at an old commit even though the detached HEAD had moved forward via fetches). `git checkout main` failed as a result. The routine diagnosed this itself correctly (verified the old `main` was a safe fast-forward ancestor of the current detached HEAD, force-updated the branch pointer, checked it out, committed, and pushed successfully) — but this cost several extra tool calls it shouldn't need to repeat weekly. Hardened `prompts/weekly_search.md` Step 8 afterward to skip `git checkout main` entirely and push directly via `git push origin HEAD:main` from the detached HEAD — pushed to the live routine via `RemoteTrigger` `action: "update"`.
 
-Expected this time: `site:`-scoped WebSearch calls per source, at least some candidate listings extracted from snippets (price/location may be `null` for many — that's expected, not a bug), an email with a New-listings section, and a successful commit of a non-empty `state/seen_listings.json`. If it's *still* zero listings, that's a real "no hardtops currently listed" or "WebSearch itself isn't surfacing them" signal worth a closer look — not necessarily another platform bug, since WebSearch (unlike WebFetch) did work in the first run.
-
-- [ ] **Step 6: Confirm state and archive were committed**
+- [x] **Step 6: Confirm state and archive were committed**
 
 ```bash
 cd "Hard Top Agent"
-git pull
+git fetch origin && git log --oneline origin/main -5
+git pull --no-edit
 ```
-Confirm `state/seen_listings.json` reflects Step 5's findings and a new `runs/<date>.html` file exists matching that run's email content.
+Confirmed: `origin/main` advanced to `b05a9e4` ("Weekly run 2026-09-10: 2 new listings"), pulled cleanly. `state/seen_listings.json` now holds the 2 eBay UK listings (both with `price`/`location`/`currency` null — the snippets didn't carry that detail, exactly the tradeoff documented in the spec's Known Limitations) and `runs/2026-09-10.html` was overwritten with the second run's fuller email content.
 
 ---
 

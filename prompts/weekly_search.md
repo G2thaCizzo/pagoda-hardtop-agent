@@ -162,8 +162,16 @@ pretend it succeeded.
 - Append any listings tagged New in step 5 to the state array (with
   `first_seen` = today's date). Leave existing entries unchanged. Write the
   full array back to `state/seen_listings.json`.
-- `git add state/seen_listings.json runs/<today>.html && git commit -m
-  "Weekly run <today's date>: <N> new listings" && git push`.
+- This checkout starts on a **detached HEAD**, not a checked-out `main`
+  branch — don't run `git checkout main` (it will fail or require
+  fast-forward surgery; confirmed the hard way in testing). Just commit
+  directly on top of the detached HEAD and push straight to `main` with a
+  refspec:
+  ```
+  git add state/seen_listings.json runs/<today>.html
+  git commit -m "Weekly run <today's date>: <N> new listings"
+  git push origin HEAD:main
+  ```
 
 Use the commit trailer:
 ```

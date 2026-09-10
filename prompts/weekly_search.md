@@ -129,7 +129,6 @@ pretend it succeeded.
 - Append any listings tagged New in step 5 to the state array (with
   `first_seen` = today's date). Leave existing entries unchanged. Write the
   full array back to `state/seen_listings.json`.
-- Delete `email_payload.json` if you created it (don't commit it).
 - `git add state/seen_listings.json runs/<today>.html && git commit -m
   "Weekly run <today's date>: <N> new listings" && git push`.
 

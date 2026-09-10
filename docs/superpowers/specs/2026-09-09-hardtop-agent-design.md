@@ -98,15 +98,25 @@ pagoda-hardtop-agent/
 
 **General classifieds, one per country**: AutoScout24 (cross-EU), eBay
 Kleinanzeigen (DE), Marktplaats (NL), LeBonCoin (FR), Subito (IT),
-Coches.net / Wallapop (ES), willhaben (AT), StandVirtual (PT), Blocket
-(SE), DBA (DK), Hasznaltauto (HU), eBay UK / Gumtree / PistonHeads (UK).
+Coches.net / Wallapop / Milanuncios (ES), willhaben (AT), StandVirtual
+(PT), Blocket (SE), DBA (DK), Hasznaltauto (HU), eBay UK / Gumtree /
+PistonHeads (UK).
 
 **W113 specialist**: sl113.org, Pagoda SL Group, Bring a Trailer, The MB
 Market.
 
-Search terms per country account for local phrasing (e.g. Hartschalendach/
-Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
-"230SL", "250SL", "280SL".
+Search terms per country account for local phrasing plus "W113",
+"Pagoda"/"Pagode", "230SL", "250SL", "280SL". **Query construction matters
+more than translation accuracy**: testing (2026-09-10) found `site:`-
+scoped queries return only thin title/URL lists, while a plain natural-
+language query naming the domain plus a local "for sale" phrase (e.g.
+"à vendre", "te koop", "zu verkaufen") gets WebSearch's own summarization
+to surface real price and location pulled from the result pages —
+sometimes listings the `site:` form missed entirely (confirmed: a €5,000
+and a €3,500 standalone hardtop on LeBonCoin, a €2,000/€2,500 hardtop on
+Kleinanzeigen, a €2,500 hardtop on Marktplaats). "Hardtop"/"hard top" as a
+loanword outperformed translated jargon like "Hartschalendach" in testing
+— kept as a fallback term, not primary.
 
 ## Known limitations
 
@@ -121,11 +131,17 @@ Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
   therefore found-via-search and **unverified as still for sale** — no way
   to confirm the page is live, that the item hasn't sold, or to read full
   condition detail beyond what the search snippet shows.
-- **Price, location, condition, thumbnail, and posted-date are frequently
-  missing.** A search snippet doesn't reliably carry structured data —
-  price/location are included only when the snippet's few lines of text
-  happen to show them. Thumbnails and posted-dates aren't available from
-  a snippet at all and are always `null`.
+- **No thumbnail images, ever — confirmed technically impossible in this
+  setup, not an oversight.** WebSearch never returns image URLs (tested
+  directly), and page-fetching to get one is blocked by the same sandbox
+  restriction above. `thumbnail` is always `null`.
+- **Price, location, condition and posted-date are inconsistently
+  available.** Query construction (see Sources above) substantially
+  affects this — natural-language queries surface real price/location far
+  more often than `site:`-scoped ones did in initial testing — but
+  coverage still depends on what WebSearch's summary happens to mention.
+  Posted-dates aren't reliably available from search results at all and
+  are always `null`.
 - **Best-effort coverage, not exhaustive.** Sites that resist search
   indexing may be under-represented some weeks — the email notes when a
   source returned nothing usable.

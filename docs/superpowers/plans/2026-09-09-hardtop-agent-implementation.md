@@ -204,19 +204,56 @@ Confirmed: `origin/main` advanced to `b05a9e4` ("Weekly run 2026-09-10: 2 new li
 
 **Interfaces:**
 - Consumes: `trigger_id` from Task 4, the post-Task-5 state of `state/seen_listings.json`
-- Produces: confidence the weekly cadence will behave correctly going forward — final task, nothing downstream consumes this.
+- Produces: confidence the weekly cadence behaves correctly — consumed by Task 7 as the baseline it improves on.
 
-- [ ] **Step 1: Trigger a second manual run**
+- [x] **Step 1: Trigger a second manual run**
 
-Call `RemoteTrigger` `action: "run"` with the same `trigger_id`, shortly after Task 5 completes.
+Called `RemoteTrigger` `action: "run"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez`, shortly after Task 5 — session `cse_012RidrpPPDUvBn7mD47nNPT`.
 
-- [ ] **Step 2: Confirm no false "New" repeats**
+- [x] **Step 2: Confirm no false "New" repeats**
 
-Check the resulting email/log: listings present in `state/seen_listings.json` from the first run should now appear in the "all other listings" (by-distance) section, not re-flagged as New. Only genuinely new listings found since the first run should be flagged New.
+Confirmed via `state/seen_listings.json`: the 2 listings from Task 5 kept their original `first_seen: "2026-09-10"` unchanged (not re-flagged New) while 2 genuinely new listings (another eBay UK hardtop + an sl113.org forum post) were correctly appended — email reported "4 listings found, 2 new," matching.
 
-- [ ] **Step 3: Confirm the routine is left enabled on its real schedule**
+- [x] **Step 3: Confirm the git fix worked cleanly**
 
-`RemoteTrigger` `action: "get"` on the `trigger_id` — confirm `enabled: true` and `cron_expression: "0 6 * * 1"`. The routine now runs unattended every Monday.
+This run's `git push origin HEAD:main` succeeded on the first try with no fast-forward workaround needed — confirms Task 5's hardening of Section 8 fixed the detached-HEAD issue for good.
+
+- [x] **Step 4: Confirm the routine is left enabled on its real schedule**
+
+`RemoteTrigger` `action: "get"` on the `trigger_id` — confirmed `enabled: true` and `cron_expression: "0 6 * * 1"`. The routine runs unattended every Monday from here.
+
+---
+
+### Task 7: Improve search query construction (post-launch refinement)
+
+After Task 6, Glen reviewed an email preview and flagged two things: only 2 UK eBay listings were found despite 13 sources being searched, and no thumbnail images appeared. Investigated both directly (interactively, via this session's own WebSearch tool) before changing the prompt.
+
+**Files:**
+- Modify: `Hard Top Agent/prompts/weekly_search.md` (Section 2 — query construction and extraction instructions)
+
+**Interfaces:**
+- Consumes: Task 6's working routine as the baseline
+- Produces: final prompt text (string) — pushed to the live routine the same way Task 4/5 did, via `RemoteTrigger` `action: "update"`.
+
+- [x] **Step 1: Investigate the thumbnail gap**
+
+Ran WebSearch directly (this session, not the routine) against several sources. Confirmed: WebSearch never returns image URLs in its response, in any form. Combined with WebFetch being blocked (Task 5's finding), there is no way to obtain a real thumbnail in this sandbox. `thumbnail: null` is a hard constraint, not a bug — documented plainly in the spec's Known Limitations rather than worked around.
+
+- [x] **Step 2: Investigate the low-yield gap**
+
+Ran comparative WebSearch queries: the routine's `site:domain.tld` + jargon approach (e.g. `site:kleinanzeigen.de W113 Hartschalendach Pagode`) vs. a natural-language query naming the domain as plain text plus a local "for sale" phrase (e.g. `Mercedes W113 hardtop kleinanzeigen.de`). The natural-language form consistently surfaced real standalone-hardtop listings with actual prices and locations that the `site:` form missed — confirmed on German, French, Dutch and Spanish sources (e.g. a €5,000 and a €3,500 hardtop on LeBonCoin, a €2,000/€2,500 hardtop on Kleinanzeigen, a €2,500 hardtop on Marktplaats). Root cause: WebSearch's synthesized summary (not just its `Links` array) carries this detail, and the routine's original instructions only pointed it at "the snippet" without directing it to that fuller summary text.
+
+- [x] **Step 3: Rewrite Section 2's query and extraction instructions**
+
+Updated `prompts/weekly_search.md`: dropped `site:` as the primary query form in favor of natural-language queries per source, added Milanuncios to the Spain row, and explicitly instructed reading WebSearch's full response (summary text included) rather than just link titles. Made the thumbnail constraint explicit and unconditional at the top of the section.
+
+- [ ] **Step 4: Push the updated prompt to the live routine**
+
+Read the final `prompts/weekly_search.md` content and call `RemoteTrigger` `action: "update"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez`, same shape as Task 4/5's updates (fresh UUID for the event).
+
+- [ ] **Step 5: One more manual run to confirm the improvement**
+
+Call `RemoteTrigger` `action: "run"` with the same `trigger_id`. Expected: listings from multiple European sources this time, not just eBay UK — if it's still UK-only after this change, that's worth a closer look rather than assuming the fix worked. `thumbnail` should remain `null` throughout (expected, not a regression).
 
 ---
 

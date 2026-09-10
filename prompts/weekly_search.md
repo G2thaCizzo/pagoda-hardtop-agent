@@ -40,49 +40,59 @@ outbound network access blocks WebFetch and any direct HTTP call
 `WebSearch` works, because it's proxied through Anthropic's own
 infrastructure rather than this sandbox's direct internet access. This
 means you **cannot** open a listing page to confirm it's still active,
-verify price, or read full condition details — you can only work from
-what WebSearch's result snippets show you (title, URL, and a short text
-excerpt). Do not attempt WebFetch or curl against classifieds sites —
-it will fail every time; don't waste turns re-testing this.
+verify price, or read full condition details. Do not attempt WebFetch or
+curl against classifieds sites — it will fail every time; don't waste
+turns re-testing this. **No thumbnail images are available either way** —
+WebSearch never returns image URLs (confirmed by testing), and there is no
+way to fetch one from the page. Don't invent or guess an image URL; every
+listing's `thumbnail` field is always `null`.
 
-For each source below, run a WebSearch using the `site:` operator shown
-(this biases results toward that actual domain rather than generic SEO/
-retailer noise) combined with "W113 hardtop" or "Pagoda hardtop" and the
-local-language term. Try each source; if a source's search returns
-nothing useful, move on and note it in the "sources not checked" list for
-the email — do not let one source's failure stop the run.
+For each source below, run a WebSearch using **natural language, not the
+`site:` operator** — testing showed `site:domain.tld` queries return only
+thin title/URL lists, while a plain query naming the domain and a local
+"for sale" phrase gets WebSearch's own summarization to surface real price
+and location detail pulled from the result pages. Combine: "Mercedes
+W113 Pagode/Pagoda hard top/hardtop" + the domain name as plain text + the
+local phrase shown. Try both "hardtop" and "hard top" as separate words if
+the first attempt returns only full cars or category/search pages. Try
+each source; if nothing useful comes back after two attempts, move on and
+note it in the "sources not checked" list for the email — do not let one
+source's failure stop the run.
+
+**Crucial: read WebSearch's full response, not just the `Links` array.**
+The prose summary that follows the links frequently contains price,
+location and condition pulled from the actual listing pages — richer than
+the bare titles. Extract from that summary text, not only from link
+titles.
 
 | Country | Source(s) | Example WebSearch query |
 |---|---|---|
-| UK | eBay UK, Gumtree, PistonHeads classifieds | `site:ebay.co.uk W113 Pagoda hardtop`, `site:gumtree.com Mercedes Pagoda hardtop`, `site:pistonheads.com W113 hardtop` |
-| Germany | eBay Kleinanzeigen | `site:kleinanzeigen.de W113 Hartschalendach Pagode` |
-| France | LeBonCoin | `site:leboncoin.fr W113 Pagode toit rigide` |
-| Netherlands | Marktplaats | `site:marktplaats.nl W113 Pagode hardtop kap` |
-| Belgium | 2ememain, AutoScout24.be | `site:2ememain.be W113 hardtop`, `site:autoscout24.be W113 hardtop` |
-| Spain | Coches.net, Wallapop | `site:coches.net W113 techo rígido Pagoda`, `site:wallapop.com W113 capota dura` |
-| Italy | Subito.it | `site:subito.it W113 capote rigida Pagoda` |
-| Austria | willhaben | `site:willhaben.at W113 Hardtop Pagode` |
-| Portugal | StandVirtual.pt | `site:standvirtual.com W113 capota rígida hardtop` |
-| Sweden | Blocket | `site:blocket.se W113 Pagoda hardtop` |
-| Denmark | DBA.dk | `site:dba.dk W113 Pagoda hardtop` |
-| Hungary | Hasznaltauto.hu | `site:hasznaltauto.hu W113 Pagoda kemény tető` |
-| Cross-EU / specialist | AutoScout24.com, sl113.org classifieds/forum, Bring a Trailer, The MB Market | `site:autoscout24.com W113 hardtop`, `site:sl113.org hardtop for sale`, `site:bringatrailer.com W113 hardtop`, `site:thembmarket.com W113 hardtop` |
+| UK | eBay UK, Gumtree, PistonHeads classifieds | `Mercedes W113 Pagoda hard top ebay.co.uk for sale`, `... gumtree.com for sale`, `... pistonheads.com for sale` |
+| Germany | eBay Kleinanzeigen | `Mercedes W113 Pagode hardtop kleinanzeigen.de` |
+| France | LeBonCoin | `Mercedes W113 Pagode hard top leboncoin.fr à vendre` |
+| Netherlands | Marktplaats | `Mercedes W113 Pagode hardtop marktplaats te koop` |
+| Belgium | 2ememain, AutoScout24.be | `Mercedes W113 Pagode hardtop 2ememain.be te koop`, `... autoscout24.be` |
+| Spain | Coches.net, Wallapop, Milanuncios | `Mercedes W113 Pagoda techo rígido coches.net en venta`, `... wallapop`, `... milanuncios en venta` |
+| Italy | Subito.it | `Mercedes W113 Pagoda hard top subito.it vendita` |
+| Austria | willhaben | `Mercedes W113 Pagode hardtop willhaben zu verkaufen` |
+| Portugal | StandVirtual.pt | `Mercedes W113 Pagoda capota rígida standvirtual à venda` |
+| Sweden | Blocket | `Mercedes W113 Pagoda hardtop blocket till salu` |
+| Denmark | DBA.dk | `Mercedes W113 Pagoda hardtop dba.dk til salg` |
+| Hungary | Hasznaltauto.hu | `Mercedes W113 Pagoda hardtop hasznaltauto.hu eladó` |
+| Cross-EU / specialist | AutoScout24.com, sl113.org classifieds/forum, Bring a Trailer, The MB Market | `Mercedes W113 Pagoda hardtop autoscout24.com`, `Mercedes W113 hardtop for sale sl113.org`, `... bringatrailer.com`, `... thembmarket.com` |
 
 For every candidate result whose URL is actually on the target domain (not
 a retailer/parts/SEO page unrelated to that specific source), extract from
-the WebSearch snippet alone:
+WebSearch's full response (links plus summary text, per above):
 - `title` (from the search result)
-- `price` and `currency` if visible in the snippet text (as shown — may be
-  EUR, GBP, SEK, DKK, HUF etc.); `null` if not shown in the snippet
-- `location` (town/region + country) if visible in the snippet; `null` if
-  not shown
+- `price` and `currency` if mentioned anywhere in the response (as shown —
+  may be EUR, GBP, SEK, DKK, HUF etc.); `null` if genuinely not mentioned
+- `location` (town/region + country) if mentioned; `null` if not
 - `url` (the canonical listing URL)
-- `thumbnail`: `null` — not available without fetching the page, do not
-  guess an image URL
-- `condition_notes`: whatever the snippet text says about condition, or
-  `null` if the snippet doesn't mention it — do not invent detail beyond
-  what the snippet actually shows
-- `posted_date`: `null` — not reliably available from a snippet
+- `thumbnail`: always `null` (see constraint above)
+- `condition_notes`: whatever is mentioned about condition, or `null` if
+  nothing is — do not invent detail beyond what's actually stated
+- `posted_date`: `null` — not reliably available from search results
 
 Every listing is **unverified** — found via search, not confirmed still
 for sale, since the page itself can't be opened. Say this plainly in the

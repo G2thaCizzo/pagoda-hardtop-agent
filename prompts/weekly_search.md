@@ -98,6 +98,21 @@ Every listing is **unverified** — found via search, not confirmed still
 for sale, since the page itself can't be opened. Say this plainly in the
 email (see step 6) rather than implying these are live-checked.
 
+**Category-page fallback (confirmed necessary in testing):** WebSearch's
+summary text sometimes clearly describes a specific real listing — a price
+and location, e.g. "a hard top for €3,500 in Paris 75015" — but the only
+URL it returns for that source is a category/search-results page (e.g.
+`leboncoin.fr/ck/equipement_auto/hard-top-mercedes`), not the individual
+ad's own page. This happens because search engines often rank a site's
+category page above a specific long-tail classified ad. When this
+happens, don't discard the lead and don't force a fake individual URL —
+capture it separately as a **lead**: `{"description": "<what the summary
+said, e.g. the price/location text>", "category_url": "<the
+category/search page URL>", "source": "<site name>"}`. Keep a running list
+of these across all sources as you search — call it `leads`. These are
+distinct from `listings` (which always have a real per-item URL) and are
+handled differently in steps 5, 6 and 8 below — never mix the two lists.
+
 ## 3. Convert price to approximate GBP
 
 Do one WebSearch for the current approximate EUR→GBP, SEK→GBP, DKK→GBP,
@@ -121,16 +136,23 @@ A listing is **New** if its `url` is not present in the state array loaded
 in step 1. Otherwise it's **Seen before** — still include it in the email
 body (in the distance-sorted section), just not flagged as new.
 
+**Leads (category-page fallback) are never diffed against state and never
+tracked for dedup.** A category-page URL recurs every week regardless of
+which specific item it currently points to, so "seen before" has no
+meaning for it — show every lead found this run, every run, with no
+new/seen distinction. Do not add `leads` entries to `state/seen_listings.json`
+in step 8.
+
 ## 6. Build the email
 
 One HTML email, structure:
 
 1. Subject: `Pagoda Hardtop Watch — <today's date> — <N> new`
-2. Short header line: date, total listings found, how many new, list any
-   sources you couldn't check this run (e.g. "no usable results this run"),
-   and a one-line note that all listings are found-via-search and
-   unverified as still active (no page fetch is possible in this
-   environment — see step 2).
+2. Short header line: date, total listings found, how many new, how many
+   leads (if any), list any sources you couldn't check this run (e.g. "no
+   usable results this run"), and a one-line note that all listings are
+   found-via-search and unverified as still active (no page fetch is
+   possible in this environment — see step 2).
 3. **New listings** section first (if any): each as a block with title
    (linked to the listing URL), price (original + approx GBP, or "not
    shown" if the snippet didn't include one), location (or "not shown"),
@@ -140,10 +162,18 @@ One HTML email, structure:
 4. **All other listings** section: same block format, sorted by estimated
    distance ascending (listings with no known location go last, grouped
    under "distance unknown").
-5. If literally zero listings were found across every source, still send
-   the email — header should say so plainly (e.g. "No listings found this
-   run — this may mean sources are blocked; check the run log"). This is
-   the signal something is broken, so it must not be silently skipped.
+5. **Possible leads (no direct link found)** section, if any `leads` were
+   found: each as a block with the `description` text, a link labeled
+   "Browse this category — direct listing link not found" pointing to
+   `category_url`, and the source name. Visually distinct from confirmed
+   listings (e.g. a lighter border/background) so it reads as lower-
+   confidence than the sections above — these are never flagged New/Seen
+   (see step 5).
+6. If literally zero listings **and** zero leads were found across every
+   source, still send the email — header should say so plainly (e.g. "No
+   listings found this run — this may mean sources are blocked; check the
+   run log"). This is the signal something is broken, so it must not be
+   silently skipped.
 
 ## 7. Send the email
 

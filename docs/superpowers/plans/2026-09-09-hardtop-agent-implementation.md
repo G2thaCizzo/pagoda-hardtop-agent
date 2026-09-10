@@ -247,13 +247,47 @@ Ran comparative WebSearch queries: the routine's `site:domain.tld` + jargon appr
 
 Updated `prompts/weekly_search.md`: dropped `site:` as the primary query form in favor of natural-language queries per source, added Milanuncios to the Spain row, and explicitly instructed reading WebSearch's full response (summary text included) rather than just link titles. Made the thumbnail constraint explicit and unconditional at the top of the section.
 
+- [x] **Step 4: Push the updated prompt to the live routine**
+
+Read the final `prompts/weekly_search.md` content and called `RemoteTrigger` `action: "update"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez` (also folded in the `from`-field angle-bracket fix from the third run's log at the same time).
+
+- [x] **Step 5: One more manual run to confirm the improvement**
+
+Called `RemoteTrigger` `action: "run"` — session `cse_019BcGJiF2o5LqtMMSXDbC3c`. Partial win: the extraction fix worked (real price/location now genuinely surfaces for German/French/Dutch sources — e.g. €2,000–2,500 Kleinanzeigen hardtops, €3,500–5,000 LeBonCoin hardtops, a €2,500 Marktplaats hardtop, all found via WebSearch's summary text), but `state/seen_listings.json` still gained 0 new confirmed listings — for each of those leads, WebSearch kept returning the site's category/search page as the URL, never the individual ad's own page, so the routine correctly declined to fabricate a listing entry without a real link. This surfaced Task 8.
+
+---
+
+### Task 8: Add category-page fallback ("leads") for unlinkable real signals
+
+Presented Task 7's finding to Glen directly: real EU price/location signal exists but often can't be tied to a working per-item link. Asked whether to keep the strict "only list with a real link" rule (consistent but leaves EU coverage thin) or add a lower-confidence fallback. Glen chose the fallback.
+
+**Files:**
+- Modify: `Hard Top Agent/prompts/weekly_search.md` (Sections 2, 5, 6 — new `leads` concept, dedup exclusion, new email section)
+- Modify: `Hard Top Agent/docs/superpowers/specs/2026-09-09-hardtop-agent-design.md` (new "Leads" section, run-steps update)
+
+**Interfaces:**
+- Consumes: Task 7's finding (real signal without a linkable URL)
+- Produces: final prompt text (string) — pushed to the live routine via `RemoteTrigger` `action: "update"`, same as prior tasks.
+
+- [x] **Step 1: Design the `leads` concept**
+
+A `lead` is `{description, category_url, source}` — distinct from a `listing` (which always has a real per-item URL). Leads get their own "Possible leads (no direct link found)" email section, visually distinct from confirmed listings, and are explicitly excluded from `state/seen_listings.json` and New/Seen dedup — a category-page URL is stable but what it currently points to isn't, so "seen before" has no meaning for it. Every lead found is shown every run, with no new/seen distinction.
+
+- [x] **Step 2: Update the prompt**
+
+Added the category-page-fallback instruction to Section 2 (right after the per-listing extraction fields), an explicit "leads are never diffed against state" note to Section 5, and a new "Possible leads" email section (item 5, before the zero-results check which now also checks leads) to Section 6.
+
+- [x] **Step 3: Update the spec**
+
+Added a "Leads (category-page fallback)" section documenting the rationale and the dedup exclusion, and updated the Run Steps list to mention the leads section in the email.
+
 - [ ] **Step 4: Push the updated prompt to the live routine**
 
-Read the final `prompts/weekly_search.md` content and call `RemoteTrigger` `action: "update"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez`, same shape as Task 4/5's updates (fresh UUID for the event).
+Read the final `prompts/weekly_search.md` content and call `RemoteTrigger` `action: "update"` with `trigger_id: trig_016X2UagUegJcG4Lid62r8Ez` (fresh UUID for the event).
 
-- [ ] **Step 5: One more manual run to confirm the improvement**
+- [ ] **Step 5: One more manual run to confirm leads appear correctly**
 
-Call `RemoteTrigger` `action: "run"` with the same `trigger_id`. Expected: listings from multiple European sources this time, not just eBay UK — if it's still UK-only after this change, that's worth a closer look rather than assuming the fix worked. `thumbnail` should remain `null` throughout (expected, not a regression).
+Call `RemoteTrigger` `action: "run"` with the same `trigger_id`. Expected: a "Possible leads" section in the email containing the German/French/Dutch signals Task 7 found but couldn't link directly, and confirmation that `state/seen_listings.json` gains no lead entries (only real per-item listings, if any).
 
 ---
 

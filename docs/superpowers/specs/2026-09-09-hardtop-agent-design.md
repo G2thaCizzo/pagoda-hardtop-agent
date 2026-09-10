@@ -85,8 +85,9 @@ pagoda-hardtop-agent/
 7. Build one HTML email: New listings first (title, price/location where
    known, distance where known, condition notes where known), then the
    rest sorted by distance ascending (unknown-distance listings grouped
-   last). Note any source that returned nothing usable this run, and that
-   all listings are unverified as still active.
+   last), then a **Leads** section (see below). Note any source that
+   returned nothing usable this run, and that all listings are unverified
+   as still active.
 8. Send via Resend.
 9. Archive the same HTML to `runs/YYYY-MM-DD.html`.
 10. Add any new listings to `state/seen_listings.json`; commit and push.
@@ -117,6 +118,22 @@ and a €3,500 standalone hardtop on LeBonCoin, a €2,000/€2,500 hardtop on
 Kleinanzeigen, a €2,500 hardtop on Marktplaats). "Hardtop"/"hard top" as a
 loanword outperformed translated jargon like "Hartschalendach" in testing
 — kept as a fallback term, not primary.
+
+## Leads (category-page fallback)
+
+Confirmed necessary in testing (2026-09-10, second query-rewrite run):
+even with the improved query construction above, WebSearch sometimes
+clearly describes a specific real listing in its summary text but only
+returns a category/search-results page as the URL for that source
+(search engines tend to rank a site's category page above a specific
+long-tail classified ad). Rather than discard this signal or fabricate an
+individual URL, these are captured separately as **leads**:
+`{description, category_url, source}`. They get their own "Possible leads
+(no direct link found)" section in the email, visually distinct from
+confirmed listings, and are **never** diffed against
+`state/seen_listings.json` or tracked for New/Seen status — a category
+page's URL is stable but what it currently points to isn't, so "seen
+before" has no meaning for it. Every lead found is shown every run.
 
 ## Known limitations
 

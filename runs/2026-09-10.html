@@ -13,51 +13,65 @@
           </tr>
           <tr>
             <td style="padding:24px;">
-              <div style="background:#fff3cd;border:1px solid #ffe08a;border-radius:4px;padding:14px 16px;margin-bottom:20px;">
-                <strong style="color:#8a6d1a;">No listings found this run — likely a broken search, not an empty market.</strong>
-                <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#5c4a12;">
-                  0 listings found, 0 new. This run's underlying network access could not
-                  reach any external classifieds site at all (confirmed even against
-                  unrelated general sites, not just car listing sites), so every source
-                  below was blocked before a single listing page could be checked. This
-                  is a run-infrastructure problem, not a signal that no hardtops are
-                  currently for sale — please check the run log / environment network
-                  policy before assuming the market is genuinely empty this week.
-                </p>
-              </div>
 
-              <h2 style="font-size:15px;margin:0 0 8px;">Sources not checked this run</h2>
-              <p style="font-size:13px;line-height:1.6;color:#444;margin:0 0 20px;">
-                All sources were blocked at the network level: eBay UK, Gumtree, PistonHeads (UK) &middot;
+              <div style="background:#eaf3ea;border:1px solid #bfe0bf;border-radius:4px;padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#2d5a2d;">
+                <strong>2 listings found this run, both new.</strong> Sources not checked / no
+                usable hardtop-only results this run: Gumtree, PistonHeads (UK) &middot;
                 eBay Kleinanzeigen (DE) &middot; LeBonCoin (FR) &middot; Marktplaats (NL) &middot;
                 2ememain, AutoScout24.be (BE) &middot; Coches.net, Wallapop (ES) &middot;
                 Subito.it (IT) &middot; willhaben (AT) &middot; StandVirtual.pt (PT) &middot;
                 Blocket (SE) &middot; DBA.dk (DK) &middot; Hasznaltauto.hu (HU) &middot;
-                AutoScout24.com, sl113.org, Pagoda SL Group, Bring a Trailer, The MB Market (cross-EU/specialist).
+                AutoScout24.com, sl113.org, Bring a Trailer, The MB Market (cross-EU/specialist).
+                Most of these returned only full cars (with hardtop mentioned as a feature,
+                out of scope), accessories/trim/covers, or generic category pages rather than
+                an individual hardtop-shell listing.
+                <br><br>
+                <em>Every listing below was found via search only — this environment
+                cannot open listing pages to confirm a listing is still active, verify the
+                asking price, or read full condition details. Treat everything here as
+                unverified and check the link before assuming it's still for sale.</em>
+              </div>
+
+              <h2 style="font-size:15px;margin:0 0 10px;color:#1a2b3c;">New listings</h2>
+
+              <div style="border:1px solid #eee;border-radius:4px;padding:14px 16px;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:bold;margin-bottom:4px;">
+                  <a href="https://www.ebay.co.uk/i/183749581682" style="color:#1a4d8f;text-decoration:none;">Mercedes W113 Pagoda SL Hardtop Roof</a>
+                </div>
+                <div style="font-size:13px;color:#444;line-height:1.6;">
+                  Price: not shown &middot; Location: not shown<br>
+                  Source: eBay UK
+                </div>
+              </div>
+
+              <div style="border:1px solid #eee;border-radius:4px;padding:14px 16px;margin-bottom:20px;">
+                <div style="font-size:14px;font-weight:bold;margin-bottom:4px;">
+                  <a href="https://www.ebay.co.uk/itm/224891577802" style="color:#1a4d8f;text-decoration:none;">Used Silver Hardtop Roof fits Mercedes W113 230SL 250SL 280SL Pagoda</a>
+                </div>
+                <div style="font-size:13px;color:#444;line-height:1.6;">
+                  Price: not shown &middot; Location: not shown<br>
+                  Source: eBay UK
+                </div>
+              </div>
+
+              <h2 style="font-size:15px;margin:0 0 10px;color:#1a2b3c;">All other listings</h2>
+              <p style="font-size:13px;color:#666;margin:0 0 20px;">
+                None — no previously-seen hardtop-shell listings resurfaced this run.
               </p>
 
-              <h2 style="font-size:15px;margin:0 0 8px;">What happened</h2>
-              <p style="font-size:13px;line-height:1.6;color:#444;margin:0 0 20px;">
-                Web search (which finds pages by keyword) still worked, but it only
-                returned generic parts listings, storage-accessory retailers, and
-                full-car auction copy — not live classified pages. Fetching any actual
-                listing page to verify it (price, location, current availability,
-                condition, photo) was denied by the environment's outbound network
-                policy for every domain tried, including sites unrelated to car
-                classifieds. Rather than guess at prices or locations from unverifiable
-                search snippets, or claim a listing is still live when it can't be
-                confirmed, this run is reporting nothing found rather than fabricating
-                entries.
+              <h2 style="font-size:15px;margin:0 0 8px;color:#1a2b3c;">Notes on this run</h2>
+              <p style="font-size:13px;line-height:1.6;color:#444;margin:0 0 12px;">
+                No prices were visible in any search snippet this run, so there was nothing
+                to convert to GBP and no distance-from-London estimates could be computed
+                (both listings above have no location shown in the snippet).
               </p>
-
-              <h2 style="font-size:15px;margin:0 0 8px;">Next steps</h2>
               <p style="font-size:13px;line-height:1.6;color:#444;margin:0;">
-                Check the routine's run log and the environment's network egress
-                configuration — outbound access to classifieds sites (and, in this
-                run, to essentially all external sites) needs to be allowed for the
-                weekly search to actually work. No changes have been made to
-                <code>state/seen_listings.json</code> this run.
+                One eBay listing for a similar hard top roof (item 284812087109) was excluded:
+                its snippet indicated the item ships from Valencia, California, US, which is
+                outside the UK/Europe scope of this search despite appearing on the
+                ebay.co.uk domain.
               </p>
+
             </td>
           </tr>
           <tr>

@@ -44,16 +44,19 @@ pagoda-hardtop-agent/
 - **Trigger**: cron, Mondays 06:00 UTC (07:00 Europe/London)
 - **Repo source**: the repo above
 - **Tools**: WebSearch, WebFetch, Bash, Read, Write, Edit, Glob, Grep
-- **Email**: HTTP call to Resend's email API using an API key stored as a
-  cloud-environment secret (never committed to the repo, never in the
-  prompt). Sends from Resend's own pre-authenticated `onboarding@resend.dev`
-  address — no custom domain, DKIM or DMARC setup needed, and no spam-
-  filtering risk from an unauthenticated "from" address (the problem hit
-  when trying both SendGrid and Brevo without owning a domain). This
-  address can only deliver to the email used to sign up for Resend, which
-  is exactly glendanielcooney@gmail.com — the one recipient this system
-  needs. This is a send-only credential with no relationship to Glen's
-  Gmail account — Gmail is only ever the recipient.
+- **Email**: sent via a connected Resend MCP connector (claude.ai
+  connector, attached to the routine's `mcp_connections`) — no API key
+  ever handled by the assistant, no raw HTTP call, no credential in any
+  file or prompt. Sends from Resend's own pre-authenticated
+  `onboarding@resend.dev` address — no custom domain, DKIM or DMARC setup
+  needed, and no spam-filtering risk from an unauthenticated "from"
+  address (the problem hit when trying both SendGrid and Brevo without
+  owning a domain). This address can only deliver to the email used to
+  sign up for Resend, which is exactly glendanielcooney@gmail.com — the
+  one recipient this system needs. The connector's "Send Email" tool
+  permission is set to Allow (auto-approved) since the routine runs
+  unattended; every other tool on the connector is left on "Needs
+  approval" or denied.
 
 ### Run steps
 
@@ -118,12 +121,17 @@ Hardtop, toit rigide, capote rigida, kemény tető) plus "W113", "Pagoda",
 ## Setup dependencies (one-time, outside this spec's automation)
 
 1. GitHub repo created — done (`G2thaCizzo/pagoda-hardtop-agent`).
-2. Resend account (signed up with glendanielcooney@gmail.com) — pending,
-   Glen to do with guidance.
-3. Resend API key added as a secret on the cloud environment used by the
-   routine — pending.
+2. Resend account (signed up with glendanielcooney@gmail.com) — done.
+3. Resend connector connected at claude.ai/customize/connectors, "Send
+   Email" tool permission set to Allow — done. (An earlier attempt used a
+   raw API key stored as a cloud-environment secret, but that mechanism
+   turned out not to exist — no such settings page/field is actually
+   exposed by the routine tooling. The connector is the real, working
+   equivalent: no key is ever handled by the assistant or stored in any
+   file.)
 4. The `RemoteTrigger` routine itself created (cron, prompt, repo source,
-   env secret reference) — pending, part of the implementation plan.
+   Resend connector attached via `mcp_connections`) — pending, part of the
+   implementation plan.
 
 ## Testing
 

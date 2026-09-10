@@ -104,35 +104,24 @@ One HTML email, structure:
 
 ## 7. Send the email
 
-POST to Resend's email API using the API key from the `RESEND_API_KEY`
-environment variable (already set on this cloud environment — read it via
-Bash, never print it, never write it to any file):
+You have a connected Resend MCP tool available (attached to this routine
+as a connector — do not use curl, do not look for any API key in the
+environment; authentication is handled entirely by the connector). Call
+its email-sending tool (action name `send-email`) with:
 
-```bash
-curl -s -w "\n%{http_code}\n" --request POST \
-  --url https://api.resend.com/emails \
-  --header "Authorization: Bearer $RESEND_API_KEY" \
-  --header "Content-Type: application/json" \
-  --data @email_payload.json
-```
-
-Build `email_payload.json` (in the repo working directory, not committed —
-delete it after sending) as:
-
-```json
-{
-  "from": "Pagoda Hardtop Watch <onboarding@resend.dev>",
-  "to": ["glendanielcooney@gmail.com"],
-  "subject": "SUBJECT_HERE",
-  "html": "HTML_BODY_HERE"
-}
-```
+- `to`: `["glendanielcooney@gmail.com"]`
+- `from`: `"Pagoda Hardtop Watch <onboarding@resend.dev>"`
+- `subject`: SUBJECT_HERE
+- `html`: HTML_BODY_HERE
+- `text`: a short plain-text fallback with the same content (required —
+  the tool rejects `html` without it)
 
 `onboarding@resend.dev` is Resend's own pre-authenticated sending address
 — do not change it, and do not attempt to verify a custom domain (not
-needed here). If the send returns anything other than HTTP 200, treat the
-run as failed at this step — still proceed to step 8 (archive + commit) so
-the attempt is recorded, but do not silently pretend it succeeded.
+needed here). Do not set `cc`, `bcc`, or `replyTo`. If the tool call
+errors or fails, treat the run as failed at this step — still proceed to
+step 8 (archive + commit) so the attempt is recorded, but do not silently
+pretend it succeeded.
 
 ## 8. Archive and update state
 

@@ -4,71 +4,64 @@
 
 **Goal:** Stand up a weekly cloud routine that searches UK/EU classifieds and W113 specialist sources for standalone Pagoda hardtops, emails Glen a summary (new listings first, rest by distance from London), and persists state between runs — without ever connecting to Glen's Gmail account.
 
-**Architecture:** A `RemoteTrigger` cloud routine (weekly cron) clones `G2thaCizzo/pagoda-hardtop-agent`, runs the prompt in `prompts/weekly_search.md` (WebSearch/WebFetch for listings, Bash for git and the Resend HTTP call), and pushes updated state back to the repo each run. Email goes out via a Resend send-only API key stored as a cloud-environment secret — no OAuth link to any real mailbox. (Two earlier choices were ruled out: SendGrid dropped its permanent free tier — now a 60-day trial only, then paid — and Brevo requires DKIM/DMARC domain verification Glen can't do without owning a domain. Resend's default `onboarding@resend.dev` sender is pre-authenticated and restricted to delivering only to the account's own signup email — exactly glendanielcooney@gmail.com, the one recipient needed here.)
+**Architecture:** A `RemoteTrigger` cloud routine (weekly cron) clones `G2thaCizzo/pagoda-hardtop-agent`, runs the prompt in `prompts/weekly_search.md` (WebSearch/WebFetch for listings, Bash for git), and pushes updated state back to the repo each run. Email goes out via a **Resend MCP connector** attached to the routine's `mcp_connections` — the routine calls the connector's `send-email` tool directly, no API key ever handled by the assistant or stored anywhere. (Two earlier choices were ruled out: SendGrid dropped its permanent free tier — now a 60-day trial only, then paid — and Brevo requires DKIM/DMARC domain verification Glen can't do without owning a domain. A raw-API-key-via-cloud-secret approach was also attempted and abandoned — no such secret-storage mechanism actually exists in the routine tooling. Resend's default `onboarding@resend.dev` sender is pre-authenticated and restricted to delivering only to the account's own signup email — exactly glendanielcooney@gmail.com, the one recipient needed here.)
 
-**Tech Stack:** Claude Code `RemoteTrigger` cloud routine (claude-sonnet-5), Resend email API (HTTP/curl), git, JSON state file.
+**Tech Stack:** Claude Code `RemoteTrigger` cloud routine (claude-sonnet-5), Resend MCP connector (`mcp.resend.com`, `send-email` tool), git, JSON state file.
 
 **Spec:** `docs/superpowers/specs/2026-09-09-hardtop-agent-design.md`
 
 ## Global Constraints
 
 - No OAuth/direct connection to Glen's Gmail account, ever (explicit requirement).
-- No credentials committed to the repo or written to any file — the Resend key lives only as a cloud-environment secret, read via `$RESEND_API_KEY`.
+- No credentials committed to the repo, written to any file, or handled by the assistant — email sends through the Resend MCP connector, which manages its own auth.
 - Hardtop-only listings — full-car listings are discarded even if they mention a hardtop.
 - A single source failing must not fail the whole run.
 - If zero listings are found across all sources, the run must still send an email saying so (this is the "something's broken" signal), never skip silently.
 - Recipient: `glendanielcooney@gmail.com`.
 - Repo: `https://github.com/G2thaCizzo/pagoda-hardtop-agent` (private), already initialized with `CLAUDE.md`, the spec, `state/seen_listings.json` (`[]`), and `runs/.gitkeep`.
 - Cloud environment: `env_01FAt9bWaCD17d2ri4J7MtLj` ("Default").
+- Resend connector: `connector_uuid: b5ae2e69-79bd-4c96-8cad-3319171616a0`, `name: Resend`, `url: https://mcp.resend.com` — only its `send-email` tool is auto-allowed; every other tool on the connector is left on "Needs approval" or denied.
 - Cron: `0 6 * * 1` (06:00 UTC Monday = 07:00 Europe/London during BST; drifts to 06:00 local once the UK reverts to GMT — cron is fixed UTC and does not auto-adjust for DST. Acceptable per spec; not a defect.).
 
 ---
 
-### Task 1: Create a Resend account and API key
+### Task 1: Create a Resend account (done)
 
-This is a manual account-setup task Glen does with guidance — there is no code to write, but there is a concrete, checkable deliverable: an account signed up with the right email, and an API key. Unlike SendGrid/Brevo, no separate sender-verification step is needed — Resend's default sending address is pre-authenticated.
+This was a manual account-setup task Glen did with guidance. Recorded here for the audit trail.
 
 **Files:** none (external account setup only)
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: confirmation that the Resend account's signup email is exactly `glendanielcooney@gmail.com`, and a Resend API key (string, held only in Resend's dashboard at this point — not pasted anywhere yet). Task 2 consumes the key; Task 3 needs no address substitution this time (the sender is fixed as `onboarding@resend.dev`, already correct in `prompts/weekly_search.md`).
+- Produces: confirmation that the Resend account's signup email is exactly `glendanielcooney@gmail.com`. Nothing downstream needs an API key — Task 4 uses the connector instead (see Task 2).
 
-- [ ] **Step 1: Create a free Resend account**
+- [x] **Step 1: Create a free Resend account**
 
-Go to https://resend.com/signup and sign up using **exactly** `glendanielcooney@gmail.com` — this must match, since Resend's default sender can only deliver to the account's own signup address. Free plan (3,000 emails/month) is far more than needed for one email/week.
-
-- [ ] **Step 2: Create an API key**
-
-In the Resend dashboard: API Keys → "Create API Key". Name it `pagoda-hardtop-watch`. Permission: "Sending access" only if that option is offered (not full account access). Copy the generated key immediately (Resend shows it once).
-
-**Do not paste the key into chat or save it to any file in this repo or workspace.** It goes directly into the cloud environment's secret store in Task 2.
-
-- [ ] **Step 3: Confirm deliverable**
-
-Glen confirms in chat: "account created with the right email, key created" (without pasting the key). This unblocks Task 2. (No Task 3 file edit is needed this time — skip straight to Task 2, then Task 4.)
+Signed up at https://resend.com/signup using `glendanielcooney@gmail.com` — required, since Resend's default sender can only deliver to the account's own signup address.
 
 ---
 
-### Task 2: Store the Resend API key as a cloud-environment secret
+### Task 2: Connect the Resend MCP connector (done)
 
-**Files:** none (cloud environment configuration, outside this repo)
+The original Task 2 ("store the API key as a cloud-environment secret") turned out to target a mechanism that doesn't exist — there is no secrets/environment-variables page for cloud environments in the routine tooling. This replacement task is what actually works: a claude.ai connector, which manages its own auth and needs no key handling by the assistant at all.
+
+**Files:** none (claude.ai connector configuration, outside this repo)
 
 **Interfaces:**
-- Consumes: the API key from Task 1 (never handled by the assistant directly — Glen enters it himself)
-- Produces: `RESEND_API_KEY` readable as an environment variable inside any cloud routine run using environment `env_01FAt9bWaCD17d2ri4J7MtLj`. Task 4's routine and Task 5/6's manual runs both consume this.
+- Consumes: nothing (Glen authorized the connector directly at claude.ai/customize/connectors)
+- Produces: an active Resend connector — `connector_uuid: b5ae2e69-79bd-4c96-8cad-3319171616a0`, `name: Resend`, `url: https://mcp.resend.com` — with its `send-email` tool set to Allow. Task 4 attaches this via `mcp_connections`.
 
-- [ ] **Step 1: Open the environment's secret settings**
+- [x] **Step 1: Connect the connector**
 
-Go to https://claude.ai/code/environments, open the "Default" environment (`env_01FAt9bWaCD17d2ri4J7MtLj`), find its secrets/environment-variables section.
+Connected at https://claude.ai/customize/connectors, scoped to "Sending access" (not full account access).
 
-- [ ] **Step 2: Add the secret**
+- [x] **Step 2: Set the one required tool permission**
 
-Add a secret named exactly `RESEND_API_KEY` with the value from Task 1 Step 2. Save.
+In the connector's tool-permission list (Settings → Connectors → Resend), found "Send Email" under "Write/delete tools" and set it to **Allow**. Left every other tool (43 read-only + 59 other write/delete tools) on "Needs approval" or denied — a scheduled routine runs unattended, so anything left on "Needs approval" would simply hang forever waiting for a click that never comes; only the one tool actually needed is auto-allowed.
 
-- [ ] **Step 3: Confirm deliverable**
+- [x] **Step 3: Confirm the connector is visible to routines**
 
-Glen confirms in chat: "secret added" (without pasting the value). If this environment turns out not to support custom secrets, stop and report back — that changes Task 4's design (would need a different secret-injection path, e.g. a connector) and should not be silently worked around.
+Re-checked via the `schedule` skill's connector list after an overnight propagation delay — it initially showed "No available MCP connectors found" three times in a row despite being connected, then appeared correctly the next morning: `Resend (connector_uuid: b5ae2e69-79bd-4c96-8cad-3319171616a0, ...)`. Lesson for next time: this can take longer than one session to propagate — don't fall back to a less secure approach after just a few retries.
 
 ---
 
@@ -148,7 +141,10 @@ Call `RemoteTrigger` with `action: "create"` and body:
         }}
       ]
     }
-  }
+  },
+  "mcp_connections": [
+    {"connector_uuid": "b5ae2e69-79bd-4c96-8cad-3319171616a0", "name": "Resend", "url": "https://mcp.resend.com"}
+  ]
 }
 ```
 
@@ -175,7 +171,7 @@ Call `RemoteTrigger` `action: "run"` with the `trigger_id` from Task 4.
 
 Poll `RemoteTrigger` `action: "list_runs"` for the new session, then `action: "get_run_log"` on it. Expected: no permission denials, no unhandled tool errors; the log shows sources being searched, an email send attempt, and a git commit/push.
 
-Note: the first run should log an HTTP 200 from the Resend call. If it doesn't, stop here — check Task 1/2 (account signup email matches the recipient exactly, secret name/value) before re-running, rather than re-running blindly.
+Note: the first run should show a successful `send-email` tool call to the Resend connector in the log. If it shows a permission denial instead, the "Send Email" tool permission (Task 2 Step 2) isn't actually set to Allow — fix that before re-running, rather than re-running blindly.
 
 - [ ] **Step 3: Confirm the email arrived**
 
@@ -215,6 +211,6 @@ Check the resulting email/log: listings present in `state/seen_listings.json` fr
 
 ## Self-review notes
 
-- Spec coverage: sources list, extraction fields, GBP conversion, distance estimate, diff logic, email structure, error handling (single-source failure, zero-results case, state corruption), archiving, and the no-Gmail-OAuth constraint are all covered in `prompts/weekly_search.md` and enforced structurally by Task 1/2 (Resend, not Gmail).
-- The one open risk flagged rather than assumed away: Task 2 Step 2 explicitly stops and reports back if the "Default" cloud environment doesn't support custom secrets, instead of guessing at a workaround.
-- Reused `trigger_id` consistently across Tasks 4, 5, 6. `VERIFIED_SENDER_ADDRESS` no longer applies (Resend's sender is fixed, not per-account) — Task 3 was rewritten as a verification-only step rather than left as a stale reference to a resolved-elsewhere placeholder.
+- Spec coverage: sources list, extraction fields, GBP conversion, distance estimate, diff logic, email structure, error handling (single-source failure, zero-results case, state corruption), archiving, and the no-Gmail-OAuth constraint are all covered in `prompts/weekly_search.md` and enforced structurally by Task 1/2 (Resend connector, not Gmail).
+- The cloud-environment-secret path assumed in an earlier version of this plan turned out not to exist — verified by finding no such field in the `RemoteTrigger` create schema and no working settings page, after three empty connector-list checks. Rather than fabricate a workaround, the plan was rewritten around the Resend MCP connector, which is the tooling's actual supported mechanism for this.
+- Reused `trigger_id` and the connector's `connector_uuid`/`name`/`url` consistently across Tasks 2, 4, 5, 6.

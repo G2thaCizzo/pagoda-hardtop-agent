@@ -17,7 +17,7 @@ coming from that automation as well as from manual edits.
 - Part of the broader [Pagoda](../CLAUDE.md) import project, but kept as its
   own repo/subfolder since it has its own automation lifecycle.
 - Email delivery deliberately avoids any OAuth connection to Glen's Gmail
-  account (explicit requirement) — uses a Resend send-only API key
+  account (explicit requirement) — uses a connected Resend MCP connector
   instead, with Gmail only ever as the recipient. Landed on Resend after
   two false starts: SendGrid dropped its permanent free tier (now a
   60-day trial, then paid), and Brevo requires DKIM/DMARC domain
@@ -25,7 +25,10 @@ coming from that automation as well as from manual edits.
   default `onboarding@resend.dev` sender is pre-authenticated and can
   only deliver to the Resend account's own signup email — since that's
   glendanielcooney@gmail.com, the one recipient this needs, that
-  restriction is actually a perfect fit, not a limitation.
+  restriction is actually a perfect fit, not a limitation. The connector
+  (not a raw API key) is what actually gets used — no cloud-environment
+  secret mechanism exists in the routine tooling, so the connector is the
+  real path that keeps the key out of the assistant's hands entirely.
 - Design rationale, source list, and known limitations are in
   `docs/superpowers/specs/2026-09-09-hardtop-agent-design.md`.
 

@@ -38,5 +38,21 @@
     "currency": null,
     "location": null,
     "first_seen": "2026-09-10"
+  },
+  {
+    "url": "https://www.carandclassic.com/car/C1784727",
+    "title": "1965 Hard top for a W113 Pagoda",
+    "price": 6995,
+    "currency": "GBP",
+    "location": "Eaton Constantine, near Shrewsbury, Shropshire, UK",
+    "first_seen": "2026-11-02"
+  },
+  {
+    "url": "https://www.carandclassic.com/l/C1982498",
+    "title": "Hard top for Mercedes W113 Pagoda",
+    "price": 9750,
+    "currency": "GBP",
+    "location": "Stratford-upon-Avon, Warwickshire, UK",
+    "first_seen": "2026-11-02"
   }
 ]
